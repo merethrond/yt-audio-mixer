@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         validateActionButtons();
     }
 
-    // Fetches metadata previews from the backend API
+    // Serverless metadata fetching via noembed oEmbed proxy (CORS allowed)
     async function fetchPreviewData(url, previewEl, type) {
         if (previewsCache[url]) {
             renderPreviewCard(previewsCache[url], previewEl);
@@ -148,35 +148,39 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         try {
-            const response = await fetch('/api/preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
+            const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
             const data = await response.json();
             
-            if (data.success) {
-                previewsCache[url] = data;
-                renderPreviewCard(data, previewEl);
+            if (data.title) {
+                const previewData = {
+                    success: true,
+                    title: data.title,
+                    duration: 'Live Connected',
+                    thumbnail: data.thumbnail_url || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=200',
+                    author: data.author_name || 'YouTube Creator',
+                    views: 'N/A'
+                };
+                previewsCache[url] = previewData;
+                renderPreviewCard(previewData, previewEl);
             } else {
-                showPreviewError(data.error || "Could not retrieve details", previewEl);
+                showPreviewError("Invalid video or private link", previewEl);
             }
         } catch (err) {
-            showPreviewError("Network error. Is Flask running?", previewEl);
+            showPreviewError("Could not retrieve YouTube details", previewEl);
         }
     }
 
     function renderPreviewCard(data, previewEl) {
         previewEl.innerHTML = `
             <div class="preview-thumb-container">
-                <img src="${data.thumbnail || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=200'}" alt="Thumbnail">
+                <img src="${data.thumbnail}" alt="Thumbnail">
                 <span class="preview-duration">${data.duration}</span>
             </div>
             <div class="preview-details">
                 <h4 class="preview-title" title="${data.title}">${data.title}</h4>
                 <p class="preview-author"><i class="fa-regular fa-user"></i> ${data.author}</p>
                 <div class="preview-stats">
-                    <span><i class="fa-regular fa-eye"></i> ${data.views} views</span>
+                    <span>YouTube Live Bridge</span>
                 </div>
             </div>
         `;
@@ -316,12 +320,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // YT Player Callbacks
     function onTutorialReady(event) {
-        // Apply initial volume
         event.target.setVolume(parseInt(tutVolSlider.value));
     }
 
     function onSoundtrackReady(event) {
-        // Apply initial volume
         event.target.setVolume(parseInt(soundVolSlider.value));
     }
 
@@ -341,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
             soundtrackPlayer.pauseVideo();
             deckPlayBtn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Replay`;
         } else if (state === YT.PlayerState.BUFFERING) {
-            // Buffer-sync: slow down background if video is buffering
             soundtrackPlayer.pauseVideo();
         }
     }
@@ -373,13 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!soundtrackPlayer || typeof soundtrackPlayer.setVolume === 'function' === false) return;
         
         if (isMusicMuted) {
-            // Unmute
             isMusicMuted = false;
             setSoundtrackVolumeDirectly(isDucked ? Math.round(originalSoundtrackVol * 0.15) : originalSoundtrackVol);
             deckMuteBtn.innerHTML = `<i class="fa-solid fa-volume-xmark"></i> Mute Music`;
             resultDucking.textContent = isDucked ? "Ducked" : "Live";
         } else {
-            // Mute
             isMusicMuted = true;
             soundtrackPlayer.setVolume(0);
             deckMuteBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Unmute Music`;
@@ -399,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isPlayersLoaded || isMusicMuted) return;
         isDucked = true;
         
-        // Drop music volume to 15% of its set value (soft ambient drop)
         const duckedVol = Math.max(1, Math.round(originalSoundtrackVol * 0.15));
         setSoundtrackVolumeDirectly(duckedVol);
         
@@ -411,7 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isPlayersLoaded || isMusicMuted) return;
         isDucked = false;
         
-        // Restore volume
         setSoundtrackVolumeDirectly(originalSoundtrackVol);
         
         manualDuckBtn.classList.remove('active');
@@ -420,7 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Keybindings: 'Shift' (duck music), 'Space' (play/pause main video)
     function handleGlobalKeydown(e) {
-        // Only trigger if focus is NOT inside inputs to prevent keyboard hijack
         if (document.activeElement.tagName === 'INPUT') return;
         
         if (e.key === 'Shift') {
@@ -443,8 +439,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Saves a session configuration template to database
-    async function saveSessionTemplate() {
+    // Helper functions for localStorage sessions management (Serverless database)
+    function getSavedSessions() {
+        try {
+            return JSON.parse(localStorage.getItem('audiosync_live_sessions')) || [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveSavedSessions(sessions) {
+        localStorage.setItem('audiosync_live_sessions', JSON.stringify(sessions));
+    }
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    // Saves a session configuration template to LocalStorage
+    function saveSessionTemplate() {
         const tutorial_url = tutInput.value.trim();
         const soundtrack_url = soundInput.value.trim();
         
@@ -456,93 +472,81 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const tutorial_vol = parseInt(tutVolSlider.value);
         const soundtrack_vol = parseInt(soundVolSlider.value);
-        const enable_ducking = false; // Flag deprecated, ducking is manual now
         const thumbnail = tutMeta ? tutMeta.thumbnail : '';
 
-        try {
-            const response = await fetch('/api/session/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    tutorial_url,
-                    soundtrack_url,
-                    tutorial_title,
-                    soundtrack_title,
-                    tutorial_vol,
-                    soundtrack_vol,
-                    enable_ducking,
-                    thumbnail
-                })
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                // Show notification badge change dynamically
-                const bookmarkIcon = saveSessionBtn.querySelector('i');
-                bookmarkIcon.className = "fa-solid fa-bookmark";
-                saveSessionBtn.style.color = "hsl(var(--color-success))";
-                setTimeout(() => {
-                    bookmarkIcon.className = "fa-regular fa-bookmark";
-                    saveSessionBtn.style.color = "";
-                }, 1500);
+        const sessions = getSavedSessions();
+        const session_id = generateUUID();
+        
+        const new_session = {
+            session_id,
+            tutorial_url,
+            soundtrack_url,
+            tutorial_title,
+            soundtrack_title,
+            tutorial_vol,
+            soundtrack_vol,
+            thumbnail,
+            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19)
+        };
 
-                loadSessionsList();
-            } else {
-                alert("Error saving session template.");
-            }
-        } catch (e) {
-            console.error("Network error saving session:", e);
-        }
+        sessions.unshift(new_session);
+        saveSavedSessions(sessions);
+
+        // Visual feedback
+        const bookmarkIcon = saveSessionBtn.querySelector('i');
+        bookmarkIcon.className = "fa-solid fa-bookmark";
+        saveSessionBtn.style.color = "hsl(var(--color-success))";
+        setTimeout(() => {
+            bookmarkIcon.className = "fa-regular fa-bookmark";
+            saveSessionBtn.style.color = "";
+        }, 1500);
+
+        loadSessionsList();
     }
 
     // Load saved templates list
-    async function loadSessionsList() {
-        try {
-            const response = await fetch('/api/session/list');
-            const data = await response.json();
+    function loadSessionsList() {
+        const data = getSavedSessions();
+        
+        if (data && data.length > 0) {
+            historyEmpty.style.display = 'none';
+            historyGrid.style.display = 'grid';
             
-            if (data && data.length > 0) {
-                historyEmpty.style.display = 'none';
-                historyGrid.style.display = 'grid';
+            historyGrid.innerHTML = '';
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'history-card';
                 
-                historyGrid.innerHTML = '';
-                data.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'history-card';
-                    
-                    card.innerHTML = `
-                        <div class="history-card-thumb">
-                            <img src="${item.thumbnail || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=300'}" alt="Thumbnail">
+                card.innerHTML = `
+                    <div class="history-card-thumb">
+                        <img src="${item.thumbnail || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=300'}" alt="Thumbnail">
+                    </div>
+                    <div class="history-card-content">
+                        <h4 class="history-card-title" title="${item.tutorial_title}">${item.tutorial_title}</h4>
+                        <div style="font-size: 10px; color: hsl(var(--text-secondary)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -4px;">
+                            <i class="fa-solid fa-music"></i> ${item.soundtrack_title}
                         </div>
-                        <div class="history-card-content">
-                            <h4 class="history-card-title" title="${item.tutorial_title}">${item.tutorial_title}</h4>
-                            <div style="font-size: 10px; color: hsl(var(--text-secondary)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -4px;">
-                                <i class="fa-solid fa-music"></i> ${item.soundtrack_title}
-                            </div>
-                            <div class="history-card-stats">
-                                <span class="history-card-badge"><i class="fa-solid fa-microphone"></i> Voice: ${item.tutorial_vol}%</span>
-                                <span class="history-card-badge"><i class="fa-solid fa-music"></i> Music: ${item.soundtrack_vol}%</span>
-                            </div>
-                            <div class="history-card-actions">
-                                <button class="btn-play-history" data-tut-url="${item.tutorial_url}" data-sound-url="${item.soundtrack_url}" data-tut-vol="${item.tutorial_vol}" data-sound-vol="${item.soundtrack_vol}">
-                                    <i class="fa-solid fa-rotate-left"></i> Load Session
-                                </button>
-                                <button class="btn-delete-history" data-id="${item.session_id}">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
-                            </div>
+                        <div class="history-card-stats">
+                            <span class="history-card-badge"><i class="fa-solid fa-microphone"></i> Voice: ${item.tutorial_vol}%</span>
+                            <span class="history-card-badge"><i class="fa-solid fa-music"></i> Music: ${item.soundtrack_vol}%</span>
                         </div>
-                    `;
-                    historyGrid.appendChild(card);
-                });
-                
-                attachSessionActions();
-            } else {
-                historyGrid.style.display = 'none';
-                historyEmpty.style.display = 'block';
-            }
-        } catch (err) {
-            console.error("Could not fetch sessions list:", err);
+                        <div class="history-card-actions">
+                            <button class="btn-play-history" data-tut-url="${item.tutorial_url}" data-sound-url="${item.soundtrack_url}" data-tut-vol="${item.tutorial_vol}" data-sound-vol="${item.soundtrack_vol}">
+                                <i class="fa-solid fa-rotate-left"></i> Load Session
+                            </button>
+                            <button class="btn-delete-history" data-id="${item.session_id}">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                historyGrid.appendChild(card);
+            });
+            
+            attachSessionActions();
+        } else {
+            historyGrid.style.display = 'none';
+            historyEmpty.style.display = 'block';
         }
     }
 
@@ -582,20 +586,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Delete session action
         document.querySelectorAll('.btn-delete-history').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', () => {
                 const sessionId = btn.getAttribute('data-id');
                 if (confirm("Are you sure you want to permanently delete this saved session template?")) {
-                    try {
-                        const response = await fetch(`/api/session/delete/${sessionId}`, { method: 'POST' });
-                        const data = await response.json();
-                        if (data.success) {
-                            loadSessionsList();
-                        } else {
-                            alert("Failed to delete session.");
-                        }
-                    } catch (err) {
-                        alert("Network connection error deleting session.");
-                    }
+                    let sessions = getSavedSessions();
+                    sessions = sessions.filter(item => item.session_id !== sessionId);
+                    saveSavedSessions(sessions);
+                    loadSessionsList();
                 }
             });
         });
