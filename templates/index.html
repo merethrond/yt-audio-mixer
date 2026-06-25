@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioSync Live - YouTube Tutorial Dual-Mixer</title>
+    <meta name="description" content="Embed and play a tutorial video and soundtrack simultaneously in your browser. Mix their volumes in real-time, synced state control, and zero-download compute.">
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Local Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- YouTube IFrame Player API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+    <!-- Background Animated Gradient mesh -->
+    <div class="mesh-bg"></div>
+
+    <div class="app-container">
+        <!-- Main Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon-wrapper">
+                    <i class="fa-solid fa-play logo-icon"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>AudioSync <span>Live</span></h1>
+                    <p class="logo-tagline">Real-Time Client-Side YouTube Live Mixer</p>
+                </div>
+            </div>
+            <div class="header-badges">
+                <span class="badge"><i class="fa-solid fa-leaf"></i> Zero-Download Instant Sync</span>
+                <span class="badge"><i class="fa-solid fa-computer"></i> 100% Client-Side Audio Mixing</span>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="workspace-grid">
+            
+            <!-- Left Panel: Input Form and Tuning Controls -->
+            <section class="panel panel-inputs">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Studio Setup</h2>
+                    <p>Load your tutorial and music tracks, configure volume balances, and sync.</p>
+                </div>
+                
+                <div class="panel-body">
+                    <!-- Step 1: Video Input Fields -->
+                    <div class="form-group">
+                        <label for="tutorial-url-input" class="field-label">
+                            <span class="label-number">1</span> Primary Tutorial Video (Video Source)
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="fa-brands fa-youtube input-icon input-youtube-red"></i>
+                            <input type="text" id="tutorial-url-input" placeholder="Paste YouTube tutorial link..." autocomplete="off">
+                            <button id="clear-tut-btn" class="input-action-btn" title="Clear input" style="display: none;">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Tutorial Live Preview Container -->
+                        <div id="tutorial-preview" class="media-preview-card" style="display: none;">
+                            <!-- Dynamic Content -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="soundtrack-url-input" class="field-label">
+                            <span class="label-number">2</span> Ambient Background Soundtrack (Audio Source)
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="fa-brands fa-youtube input-icon input-youtube-red"></i>
+                            <input type="text" id="soundtrack-url-input" placeholder="Paste YouTube soundtrack link..." autocomplete="off">
+                            <button id="clear-sound-btn" class="input-action-btn" title="Clear input" style="display: none;">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Soundtrack Live Preview Container -->
+                        <div id="soundtrack-preview" class="media-preview-card" style="display: none;">
+                            <!-- Dynamic Content -->
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Mixing Volume Regulators -->
+                    <div class="mixer-section">
+                        <h3 class="mixer-title"><i class="fa-solid fa-sliders"></i> Real-Time Mixer</h3>
+                        
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span class="slider-name"><i class="fa-solid fa-microphone-lines text-primary"></i> Tutorial Volume</span>
+                                <span id="tutorial-volume-val" class="slider-val">100%</span>
+                            </div>
+                            <input type="range" id="tutorial-volume-slider" min="0" max="100" value="100" class="premium-slider">
+                        </div>
+
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span class="slider-name"><i class="fa-solid fa-music text-accent"></i> Background Music Volume</span>
+                                <span id="soundtrack-volume-val" class="slider-val">20%</span>
+                            </div>
+                            <input type="range" id="soundtrack-volume-slider" min="0" max="100" value="20" class="premium-slider">
+                        </div>
+                        
+                        <!-- Smart Hotkey / Quick Mute Controls -->
+                        <div class="switch-container">
+                            <div class="switch-info">
+                                <span class="switch-title"><i class="fa-solid fa-compress"></i> Live Ducking Assistance</span>
+                                <span class="switch-desc">Hold <strong>Shift</strong> key anywhere to duck background music instantly.</span>
+                            </div>
+                            <button id="manual-duck-btn" class="duck-indicator-btn" title="Click or Hold Shift to duck music">
+                                <i class="fa-solid fa-volume-low"></i> DUCK MUSIC
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Primary Action Trigger -->
+                    <div class="action-buttons-group">
+                        <button id="generate-mix-btn" class="btn btn-primary" disabled>
+                            <i class="fa-solid fa-circle-play"></i> Initialize Live Studio
+                        </button>
+                        <button id="save-session-btn" class="btn btn-outline" disabled style="flex: 0 0 54px; padding: 0;" title="Save Session Template">
+                            <i class="fa-regular fa-bookmark"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Synchronized Players -->
+            <section class="panel panel-output">
+                <div class="panel-header">
+                    <h2><i class="fa-solid fa-circle-play"></i> Sync Control Deck</h2>
+                    <p>Synchronized dual-player control surface. Runs entirely in your browser.</p>
+                </div>
+                
+                <div class="panel-body flex-grow-container">
+                    
+                    <!-- State A: Idle State -->
+                    <div id="output-idle-state" class="center-state">
+                        <div class="state-icon-wrapper pulse-slow">
+                            <i class="fa-solid fa-circle-nodes"></i>
+                        </div>
+                        <h3>Studio Offline</h3>
+                        <p>Provide two YouTube URLs in the studio setup and click "Initialize Live Studio" to sync and render your players.</p>
+                    </div>
+
+                    <!-- State B: Live Players Screen -->
+                    <div id="output-completed-state" class="result-player-container" style="display: none;">
+                        <!-- Status Bar -->
+                        <div class="sync-status-bar">
+                            <div class="status-indicator">
+                                <span class="indicator-dot blinking-green"></span>
+                                <span id="status-label">Synchronized Live Mode</span>
+                            </div>
+                            <div class="deck-actions">
+                                <button id="deck-play-btn" class="mini-deck-btn" title="Sync Play / Pause Both">
+                                    <i class="fa-solid fa-play"></i> Sync Play
+                                </button>
+                                <button id="deck-mute-btn" class="mini-deck-btn" title="Mute Soundtrack Only">
+                                    <i class="fa-solid fa-volume-xmark"></i> Mute Music
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 16:9 Tutorial Video Frame -->
+                        <div class="player-wrapper">
+                            <div id="tutorial-player-container"></div>
+                        </div>
+                        
+                        <!-- Soundtrack Mini Control Node -->
+                        <div class="soundtrack-node-panel">
+                            <div class="node-icon"><i class="fa-solid fa-music"></i></div>
+                            <div class="node-info">
+                                <h5>Background Track Connected</h5>
+                                <p id="soundtrack-node-title">Retrieving soundtrack stream...</p>
+                            </div>
+                            <div class="node-player-container">
+                                <!-- Soundtrack iframe embedded inside 1x1 container to play audio in background -->
+                                <div id="soundtrack-player-container"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="result-details">
+                            <h3 id="result-video-title" class="result-title">Tutorial Session</h3>
+                            
+                            <div class="result-meta-grid">
+                                <div class="meta-item">
+                                    <span class="meta-label">Sync Control</span>
+                                    <span class="meta-val text-primary"><i class="fa-solid fa-link"></i> Linked</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Voice Gain</span>
+                                    <span id="result-video-voice-vol" class="meta-val">100%</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Music Gain</span>
+                                    <span id="result-video-music-vol" class="meta-val">20%</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Mute State</span>
+                                    <span id="result-video-ducking" class="meta-val">Live</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Panel: Saved Sessions -->
+        <section class="panel panel-history">
+            <div class="panel-header">
+                <h2><i class="fa-solid fa-bookmark"></i> Saved Studio Sessions</h2>
+                <p>Reload your favorite tutorial & soundtrack configurations instantly. Zero compute load.</p>
+            </div>
+            
+            <div class="panel-body">
+                <div id="history-empty" class="history-empty-state">
+                    <i class="fa-regular fa-bookmark"></i>
+                    <p>No saved sessions yet. Bookmark a setup using the save button above to persist it.</p>
+                </div>
+                
+                <!-- Saved Sessions Cards Grid -->
+                <div id="history-grid" class="history-grid" style="display: none;">
+                    <!-- Template Card (Dynamic) -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer-bar">
+            <p>&copy; 2026 AudioSync Studio. Running on high-performance Client-Side IFrame Audio bridges.</p>
+        </footer>
+    </div>
+
+    <!-- FontAwesome JS helper for safety -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" defer></script>
+    <!-- Local Javascript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
