@@ -254,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 height: '100%',
                 width: '100%',
                 videoId: tutorialId,
+                host: 'https://www.youtube-nocookie.com',
                 playerVars: {
                     'playsinline': 1,
                     'modestbranding': 1,
@@ -270,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 height: '100%',
                 width: '100%',
                 videoId: soundtrackId,
+                host: 'https://www.youtube-nocookie.com',
                 playerVars: {
                     'playsinline': 1,
                     'modestbranding': 1,
