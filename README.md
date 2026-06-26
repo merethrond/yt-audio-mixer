@@ -28,6 +28,17 @@ When inside the active Sync Studio:
 
 ---
 
+## 💾 How to Bookmark a Studio Session
+
+You can save your custom setups (YouTube links and volume preferences) to reload them instantly later:
+1. Paste the **Tutorial Video** link and the **Background Soundtrack** link in the input fields.
+2. Adjust the sliders to set your preferred volume levels for both tracks.
+3. Click the **Bookmark (Save)** icon button (located next to the "Initialize Live Studio" button).
+4. Your setup will instantly appear in the **Saved Studio Sessions** section at the bottom of the page.
+5. Click **Load Session** on any saved card to instantly reload that configuration and initialize the players!
+
+---
+
 ## 🛠️ Local Development & Running
 
 Since the application is 100% client-side:

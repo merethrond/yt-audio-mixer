@@ -201,8 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const tutVal = tutInput.value.trim();
         const soundVal = soundInput.value.trim();
         
-        const hasValidTut = YT_REGEX.test(tutVal) && previewsCache[tutVal] && previewsCache[tutVal].success;
-        const hasValidSound = YT_REGEX.test(soundVal) && previewsCache[soundVal] && previewsCache[soundVal].success;
+        const hasValidTut = YT_REGEX.test(tutVal);
+        const hasValidSound = YT_REGEX.test(soundVal);
         
         if (hasValidTut && hasValidSound) {
             generateBtn.disabled = false;
