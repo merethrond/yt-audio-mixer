@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const deckPlayBtn = document.getElementById('deck-play-btn');
     const deckMuteBtn = document.getElementById('deck-mute-btn');
     const soundtrackNodeTitle = document.getElementById('soundtrack-node-title');
+    const deckPlaylistBtn = document.getElementById('deck-playlist-btn');
     
     const resultTitle = document.getElementById('result-video-title');
     const resultVoiceVol = document.getElementById('result-video-voice-vol');
@@ -244,6 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
         resultVoiceVol.textContent = `${tutVolSlider.value}%`;
         resultMusicVol.textContent = `${soundVolSlider.value}%`;
         resultDucking.textContent = "Live";
+        
+        // Generate YouTube Playlist Sharing URL
+        deckPlaylistBtn.href = `https://www.youtube.com/watch_videos?video_ids=${tutorialId},${soundtrackId}`;
 
         // Clean up previous players if any to prevent memory leaks and API conflicts
         cleanupPlayers();

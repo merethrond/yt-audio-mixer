@@ -39,6 +39,18 @@ You can save your custom setups (YouTube links and volume preferences) to reload
 
 ---
 
+## 🔗 Saving to your YouTube Playlist
+
+Since the application mixes the audio streams dynamically on the client side without creating a new video file, you cannot save the mixed result as a single YouTube video. 
+
+However, you can save the combination as a custom YouTube playlist:
+1. Initialize the studio with your **Tutorial Video** and **Background Soundtrack**.
+2. Click the **Add to Playlist** button on the Sync Control Deck.
+3. This opens a special YouTube queue link (`/watch_videos?video_ids=...`) containing both videos.
+4. On YouTube, click the **+ (Save Playlist)** or **Save** button in the sidebar to add this dual-video compilation permanently to your YouTube Library.
+
+---
+
 ## 🛠️ Local Development & Running
 
 Since the application is 100% client-side:
