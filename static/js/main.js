@@ -498,14 +498,29 @@ document.addEventListener('DOMContentLoaded', () => {
         sessions.unshift(new_session);
         saveSavedSessions(sessions);
 
-        // Visual feedback
-        const bookmarkIcon = saveSessionBtn.querySelector('i');
-        bookmarkIcon.className = "fa-solid fa-bookmark";
-        saveSessionBtn.style.color = "hsl(var(--color-success))";
-        setTimeout(() => {
-            bookmarkIcon.className = "fa-regular fa-bookmark";
-            saveSessionBtn.style.color = "";
-        }, 1500);
+        // Visual feedback (safe for FontAwesome SVG replacements)
+        try {
+            const bookmarkIcon = saveSessionBtn.querySelector('i, svg');
+            if (bookmarkIcon) {
+                bookmarkIcon.classList.remove('fa-regular', 'far');
+                bookmarkIcon.classList.add('fa-solid', 'fas', 'fa-bookmark');
+            }
+            saveSessionBtn.style.color = "hsl(var(--color-success))";
+            setTimeout(() => {
+                try {
+                    const activeIcon = saveSessionBtn.querySelector('i, svg');
+                    if (activeIcon) {
+                        activeIcon.classList.remove('fa-solid', 'fas');
+                        activeIcon.classList.add('fa-regular', 'far');
+                    }
+                    saveSessionBtn.style.color = "";
+                } catch (e) {
+                    console.error("Icon restore failed:", e);
+                }
+            }, 1500);
+        } catch (e) {
+            console.error("Bookmark feedback failed:", e);
+        }
 
         loadSessionsList();
     }
